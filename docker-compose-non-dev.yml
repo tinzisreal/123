@@ -6,7 +6,6 @@ x-superset-volumes: &superset-volumes
   - ./docker:/app/docker
   - superset_home:/app/superset_home
   - ./docker/pythonpath_dev/superset_config_docker.py:/app/pythonpath/superset_config_docker.py
-
 services:
   redis:
     image: redis:7
@@ -14,27 +13,36 @@ services:
     restart: unless-stopped
     volumes:
       - redis:/data
+
   nginx:
-    image: nginx:latest
-    container_name: nginx_reverse_proxy
+    image: nginx:1.27-alpine            # <-- dùng tag hợp lệ/ổn định
+    container_name: nginx7
     ports:
       - "80:80"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro   # <-- mount đúng đường dẫn trong container
     depends_on:
-      - superset
-      - jmix_database
+      - superset                                       # <-- chỉ cần đợi superset
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
   db:
-    env_file: docker/.env-non-dev
-    image: postgres:15
+    image: postgres:16.3
     container_name: superset_db
     restart: unless-stopped
+    environment:
+      POSTGRES_USER: superset
+      POSTGRES_PASSWORD: superset
+      POSTGRES_DB: superset
     volumes:
       - db_home:/var/lib/postgresql/data
       - ./docker/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U superset -d superset"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 
   superset:
     env_file: docker/.env-non-dev
@@ -45,11 +53,23 @@ services:
     user: "root"
     restart: unless-stopped
     ports:
-      - 8088:8088
-    depends_on: *superset-depends-on
-    volumes: *superset-volumes
+      - "8088:8088"
+    depends_on:
+      - db
+      - redis
+      - superset-init                                 # <-- đợi init chạy xong
+    volumes: 
+      - ./docker:/app/docker
+      - superset_home:/app/superset_home
+      - ./docker/pythonpath_dev/superset_config_docker.py:/app/pythonpath/superset_config_docker.py
+      - ./superset/templates:/app/superset/templates
+    environment:                                      # <-- đảm bảo load config custom
+      - SUPERSET_CONFIG_PATH=/app/pythonpath/superset_config_docker.py
+      - PYTHONPATH=/app/pythonpath
+    
     extra_hosts:
       - "keycloak.local:host-gateway"
+
   superset-init:
     build: .
     image: *superset-image
@@ -61,7 +81,7 @@ services:
     volumes: *superset-volumes
     healthcheck:
       disable: true
-    
+
   superset-worker:
     build: .
     image: *superset-image
@@ -72,15 +92,14 @@ services:
     depends_on: *superset-depends-on
     user: "root"
     volumes: *superset-volumes
+    environment:
+      - SUPERSET_CONFIG_PATH=/app/pythonpath/superset_config_docker.py  # <--
+      - PYTHONPATH=/app/pythonpath                                      # <--
+      - C_FORCE_ROOT=1                                                  # tránh cảnh báo Celery chạy root
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "celery -A superset.tasks.celery_app:app inspect ping -d celery@$$HOSTNAME"
-        ]
+      test: ["CMD-SHELL", "celery -A superset.tasks.celery_app:app inspect ping -d celery@$$HOSTNAME"]
     extra_hosts:
       - "keycloak.local:host-gateway"
-
 
   superset-worker-beat:
     build: .
@@ -92,17 +111,20 @@ services:
     depends_on: *superset-depends-on
     user: "root"
     volumes: *superset-volumes
+    environment:
+      - SUPERSET_CONFIG_PATH=/app/pythonpath/superset_config_docker.py  # <--
+      - PYTHONPATH=/app/pythonpath                                      # <--
+      - C_FORCE_ROOT=1
     healthcheck:
       disable: true
     extra_hosts:
       - "keycloak.local:host-gateway"
 
-
   jmix_database:
     image: postgres:16.3
     container_name: jmix_database
     ports:
-      - 5433:5432
+      - "5433:5432"
     environment:
       POSTGRES_DB: onboarding
       POSTGRES_USER: root

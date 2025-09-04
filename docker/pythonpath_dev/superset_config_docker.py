@@ -6,7 +6,7 @@ SECRET_KEY = 'tungdeptrai'
 
 # Enable OAuth authentication
 AUTH_TYPE = AUTH_OAUTH
-LOGOUT_REDIRECT_URL = 'http://localhost:8180/realms/master/protocol/openid-connect/logout'
+LOGOUT_REDIRECT_URL = 'http://localhost:8180/realms/jmix-realm/protocol/openid-connect/logout'
 AUTH_USER_REGISTRATION = True
 AUTH_USER_REGISTRATION_ROLE = 'Gamma'
 
@@ -15,13 +15,13 @@ HTTP_HEADERS = {
 }
 OAUTH_PROVIDERS = [
     {
-        "name": "tung",   # tên provider, sẽ hiển thị nút "Login with kc"
+        "name": "keycloak",   # tên provider, sẽ hiển thị nút "Login with kc"
         "icon": "fa-key",
         "token_key": "access_token",
         "remote_app": {
-            "client_id": "superman",
-            "client_secret": "iadJ87dba8b32TfnymdBpVxpLcYsheWL",
-            "server_metadata_url": "http://keycloak.local:8180/realms/master/.well-known/openid-configuration",
+            "client_id": "superset",
+            "client_secret": "aV6762iYNwmXaqqPb4tFuhrXkqEQ17Il",
+            "server_metadata_url": "http://keycloak.local:8180/realms/jmix-realm/.well-known/openid-configuration",
             "client_kwargs": {"scope": "openid profile email"},
         },
     }
@@ -42,11 +42,11 @@ class KeycloakSecurity(SupersetSecurityManager):
     """
 
     def oauth_user_info(self, provider, resp=None):
-        if provider == "tung":
+        if provider == "keycloak":
             log.debug("Keycloak response received: %s", resp)
             # Gọi trực tiếp endpoint userinfo
             me = self.appbuilder.sm.oauth_remotes[provider].get(
-                "http://keycloak.local:8180/realms/master/protocol/openid-connect/userinfo"
+                "http://keycloak.local:8180/realms/jmix-realm/protocol/openid-connect/userinfo"
             )
             me.raise_for_status()
             data = me.json()
@@ -57,8 +57,7 @@ class KeycloakSecurity(SupersetSecurityManager):
                 "first_name": data.get("given_name", ""),
                 "last_name": data.get("family_name", ""),
                 "email": data.get("email", ""),
-                "name": data.get("name", ""),
-                "role_keys": data.get("roles", []),  # hoặc groups nếu bạn map theo Keycloak
+                "role_keys": data.get("roles", []),
             }
 
 CUSTOM_SECURITY_MANAGER = KeycloakSecurity
@@ -95,43 +94,5 @@ TALISMAN_CONFIG = {
     "content_security_policy_nonce_in": ["script-src"],
     "force_https": False,
     "session_cookie_secure": False,
+
 }
-
-# # ---- 8. Custom Security Manager ----
-# class KeycloakSecurityManager(SupersetSecurityManager):
-#     def oauth_user_info(self, provider, response=None):
-#         userinfo = self.appbuilder.sm.oauth_remotes[provider].get('userinfo').json()
-
-#         access_token = response.get("access_token")
-#         decoded_token = jwt.decode(access_token, options={"verify_signature": False})
-
-#         roles = []
-
-#         # 1. Realm roles
-#         if "realm_access" in decoded_token:
-#             roles.extend(decoded_token["realm_access"].get("roles", []))
-
-#         # 2. Client roles (resource_access)
-#         if "resource_access" in decoded_token:
-#             client_roles = decoded_token["resource_access"].get("jmix-app", {}).get("roles", [])
-#             roles.extend(client_roles)
-
-#         # 3. Custom claim "roles" (mapper)
-#         if "roles" in decoded_token:
-#             claim_roles = decoded_token["roles"]
-#             if isinstance(claim_roles, list):
-#                 roles.extend(claim_roles)
-#             elif isinstance(claim_roles, str):
-#                 roles.append(claim_roles)
-
-#         return {
-#             "username": userinfo.get("preferred_username"),
-#             "first_name": userinfo.get("given_name", ""),
-#             "last_name": userinfo.get("family_name", ""),
-#             "email": userinfo.get("email", ""),
-#             "role_keys": roles
-#         }
-
-
-
-# CUSTOM_SECURITY_MANAGER = KeycloakSecurityManager
