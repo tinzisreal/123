@@ -54,3 +54,34 @@
         </footer>
     {% endblock %}
 {% endblock %}
+
+{% block tail_js %}
+  {{ super() }}
+  <script nonce="{{ csp_nonce() }}">
+    document.addEventListener("DOMContentLoaded", function() {
+      console.log("✅ baselayout.html JS loaded!");
+
+      const logoutLinks = document.querySelectorAll("a[href='/logout/']");
+      console.log("Found logout links:", logoutLinks);
+
+      logoutLinks.forEach(link => {
+        link.addEventListener("click", function(e) {
+          e.preventDefault();
+          console.log("🚪 Custom Superset Logout clicked");
+
+          const popup = window.open(
+            "/logout/",
+            "SupersetLogout",
+            "width=400,height=300"
+          );
+
+          // auto đóng popup + reload sau 0.5s
+          setTimeout(() => {
+            if (popup && !popup.closed) popup.close();
+            window.location.href = "/login/";
+          }, 500);
+        });
+      });
+    });
+  </script>
+{% endblock %}

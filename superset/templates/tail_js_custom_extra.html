@@ -1,25 +1,44 @@
-{#
-  Licensed to the Apache Software Foundation (ASF) under one
-  or more contributor license agreements.  See the NOTICE file
-  distributed with this work for additional information
-  regarding copyright ownership.  The ASF licenses this file
-  to you under the Apache License, Version 2.0 (the
-  "License"); you may not use this file except in compliance
-  with the License.  You may obtain a copy of the License at
+<script nonce="{{ csp_nonce() }}">
+  document.addEventListener("DOMContentLoaded", function() {
+    console.log("✅ tail_js_custom_extra.html loaded!");
 
-    http://www.apache.org/licenses/LICENSE-2.0
+    const interval = setInterval(() => {
+      const logoutLink = document.querySelector("a[href='/logout/']");
+      if (logoutLink) {
+        clearInterval(interval);
+        console.log("🎯 Found logout link:", logoutLink);
+        logoutLink.textContent = "🚪 Logout Superset + Keycloak";
+        logoutLink.addEventListener("click", async function(e) {
+          e.preventDefault();
+          console.log("🚪 Custom Logout clicked!");
 
-  Unless required by applicable law or agreed to in writing,
-  software distributed under the License is distributed on an
-  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-  KIND, either express or implied.  See the License for the
-  specific language governing permissions and limitations
-  under the License.
-#}
+          // 1. Lấy logout_url từ backend (có id_token_hint nếu có)
+          const resp = await fetch("/api/get-logout-url", { credentials: "include" });
+          const data = await resp.json();
+          const logoutUrl = data.logout_url;
+          console.log("🔗 Logout URL:", logoutUrl);
 
-{#
-  This file may be overridden in your custom deployment.
-  It will be included in every view in superset and is a
-  good place to include your custom frontend code, such as
-  scripts to initialize google analytics, intercom, segment, etc.
-#}
+          const w = 500, h = 400;
+          const left = (screen.width - w) / 2;
+          const top = (screen.height - h) / 2;
+
+          // 2. Mở popup Keycloak logout
+          window.open(
+            logoutUrl,
+            "KeycloakLogout",
+            `width=${w},height=${h},top=${top},left=${left}`
+          );
+        });
+      }
+    }, 500);
+
+    // 4. Nghe sự kiện từ popup Keycloak
+    window.addEventListener("message", (event) => {
+      console.log("📩 Received message:", event.data);
+      if (event.data === "kc-logout-success") {
+        console.log("🟢 Keycloak logout thành công → reload Superset");
+        window.location.href = "/login/";
+      }
+    });
+  });
+</script>

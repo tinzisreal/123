@@ -13,31 +13,17 @@
 <script nonce="{{ csp_nonce() }}">
 document.getElementById("kc-login-btn").onclick = function(e) {
   e.preventDefault();
-  console.log("CLICKED KC BUTTON");
 
   const w = 600, h = 700;
   const left = (screen.width - w) / 2;
   const top = (screen.height - h) / 2;
 
-  const popup = window.open(
-    "http://localhost:8088/login/keycloak",
+  window.open(
+    "http://localhost:8088/login/keycloak", // Keycloak login URL
     "Keycloak Login",
     `width=${w},height=${h},top=${top},left=${left}`
   );
-
-  if (!popup) {
-    alert("Popup blocked! Hãy bật popup cho site này.");
-    return;
-  }
-
-  // Lắng nghe message từ popup
-  window.addEventListener("message", (event) => {
-    if (event.data === "kc-login-success") {
-      console.log("Login success, closing popup...");
-      if (!popup.closed) popup.close();
-      window.location.reload();
-    }
-  });
 };
+
 </script>
 {% endblock %}
