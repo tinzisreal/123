@@ -208,19 +208,26 @@ Superset Configuration for Docker with Keycloak OAuth Integration
 """
 import logging
 from flask import request, session, redirect
-from flask_appbuilder.security.manager import AUTH_OAUTH
+from flask_appbuilder.security.manager import AUTH_OAUTH, AUTH_DB
 from superset.security import SupersetSecurityManager
+import os
 
 # =============================================================================
 # BASIC CONFIGURATION
 # =============================================================================
 SECRET_KEY = "123123123"
-
+SQLALCHEMY_DATABASE_URI = os.environ.get(
+    "SQLALCHEMY_DATABASE_URI",
+    "postgresql+psycopg2://superset:superset@db:5432/superset"
+)
 AUTH_TYPE = AUTH_OAUTH
 AUTH_USER_REGISTRATION = True
 AUTH_USER_REGISTRATION_ROLE = "Gamma"
 AUTH_ROLE_ADMIN = "Admin"
 AUTH_ROLES_SYNC_AT_LOGIN = True
+SHOW_STACKTRACE = True
+AUTH_DB = True          # 👈 Cho phép login bằng username/password qua API
+WTF_CSRF_ENABLED = False
 
 OAUTH_PROVIDERS = [
     {
@@ -291,7 +298,7 @@ AUTH_ROLES_MAPPING = {
 GUEST_ROLE_NAME = "Gamma"
 FEATURE_FLAGS = {"EMBEDDED_SUPERSET": True}
 HTTP_HEADERS = {"X-Frame-Options": "ALLOWALL"}
-
+SESSION_COOKIE_SAMESITE = None
 TALISMAN_CONFIG = {
     "content_security_policy": {
         "default-src": ["'self'"],
@@ -308,7 +315,7 @@ TALISMAN_CONFIG = {
 # CUSTOM FLASK APP MUTATOR
 # =============================================================================
 def FLASK_APP_MUTATOR(app):
-    from flask import Blueprint
+    from flask import Blueprint, request, session, redirect
 
     bp = Blueprint("custom_logout", __name__)
 
@@ -332,42 +339,57 @@ def FLASK_APP_MUTATOR(app):
 
     app.register_blueprint(bp)
 
-    # inject script login + logout vào welcome page
     @app.after_request
     def inject_custom_scripts(response):
-        if response.mimetype == "text/html" and not request.path.startswith("/login"):
-            body = response.get_data(as_text=True)
-            if "</body>" in body:
-                body = body.replace(
-                    "</body>",
-                    """
-                    <script>
-                        console.log("✅ Injected custom login/logout script");
-
-                        // --- handle login success reload ---
-                        if (window.opener && !window.opener.closed) {
-                            console.log("🔄 Reload opener after login success");
-                            window.opener.location.reload();
-                            window.open('', '_self');
-                            window.close();
-                        }
-
-                        // --- replace logout link using MutationObserver ---
-                        const observer = new MutationObserver(() => {
-                            const logoutLink = document.querySelector("a[href='/logout/']");
-                            if (logoutLink) {
-                                console.log("🎯 Found logout link, đổi sang /logout/keycloak");
-                                logoutLink.setAttribute("href", "/logout/keycloak");
-                                logoutLink.textContent = "Logout Full";
-                                observer.disconnect(); // ngừng theo dõi sau khi xong
+        try:
+            if response.mimetype == "text/html":  # inject mọi HTML response, kể cả login
+                body = response.get_data(as_text=True)
+                if "</body>" in body:
+                    logger.debug("💉 Injecting custom script vào %s", request.path)
+                    body = body.replace(
+                        "</body>",
+                        """
+                        <script>
+                            console.log("✅ Injected custom login/logout script");
+                            if (window.opener && !window.opener.closed) {
+                                console.log("🔄 Reload opener after login success");
+                                window.opener.location.reload();
+                                window.open('', '_self');
+                                window.close();
                             }
-                        });
+                            const observer = new MutationObserver(() => {
+                                const logoutLink = document.querySelector("a[href='/logout/']");
+                                if (logoutLink) {
+                                    console.log("🎯 Found logout link, đổi sang /logout/keycloak");
+                                    logoutLink.setAttribute("href", "/logout/keycloak");
+                                    logoutLink.textContent = "Logout Full";
+                                    observer.disconnect();
+                                }
+                            });
+                            observer.observe(document.body, { childList: true, subtree: true });
+                        </script>
+                        </body>
+                        """,
+                    )
+                    response.set_data(body)
+        except Exception as e:
+            logger.error("⚠️ Lỗi khi inject script: %s", e)
 
-                        observer.observe(document.body, { childList: true, subtree: true });
-                    </script>
-                    </body>
-                    """,
-                )
-                response.set_data(body)
         return response
+
     return app
+
+
+
+# =============================================================================
+# THEME CUSTOMIZATION
+# =============================================================================
+
+
+
+
+APP_ICON = "/static/assets/images/quandoi.png"
+LOGO_TARGET_PATH = '/superset/welcome'
+LOGO_TOOLTIP = 'Welcome to Quanluc Dashboard'
+LOGO_RIGHT_TEXT = "Quản lý quân lực"
+APP_NAME = "Quản lý quân lực"

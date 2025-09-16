@@ -39,4 +39,4 @@ export {
   SharedLabelColorSource,
 } from './SharedLabelColorSingleton';
 
-export const BRAND_COLOR = '#00A699';
+export const BRAND_COLOR = '#6dce44ff';  // xanh dương theo màu logo

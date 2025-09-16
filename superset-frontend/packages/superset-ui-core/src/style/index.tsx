@@ -43,6 +43,7 @@ export function useTheme() {
       'useTheme() could not find a ThemeContext. The <ThemeProvider/> component is likely missing from the app.',
     );
   }
+  console.log("🎨 useTheme() hook called:", theme);  // 👉 log test
   return theme;
 }
 
@@ -60,25 +61,25 @@ const defaultTheme = {
       help: '#737373',
     },
     primary: {
-      base: '#20A7C9',
-      dark1: '#1A85A0',
-      dark2: '#156378',
-      light1: '#79CADE',
-      light2: '#A5DAE9',
-      light3: '#D2EDF4',
-      light4: '#E9F6F9',
-      light5: '#F3F8FA',
+      base: '#8e2e2eff',   // 🔵 xanh dương chủ đạo
+      dark1: '#1565C0',
+      dark2: '#0D47A1',
+      light1: '#42A5F5',
+      light2: '#90CAF9',
+      light3: '#BBDEFB',
+      light4: '#E3F2FD',
+      light5: '#F5F9FF',
     },
     secondary: {
-      base: '#444E7C',
-      dark1: '#363E63',
-      dark2: '#282E4A',
-      dark3: '#1B1F31',
-      light1: '#8E94B0',
-      light2: '#B4B8CA',
-      light3: '#D9DBE4',
-      light4: '#ECEEF2',
-      light5: '#F5F5F8',
+      base: '#FFC107',   // 🟡 vàng phụ
+      dark1: '#FFA000',
+      dark2: '#FF8F00',
+      dark3: '#FF6F00',
+      light1: '#FFD54F',
+      light2: '#FFE082',
+      light3: '#FFECB3',
+      light4: '#FFF8E1',
+      light5: '#FFFFF9',
     },
     grayscale: {
       base: '#666666',
@@ -98,11 +99,11 @@ const defaultTheme = {
       light2: '#FAEDEE',
     },
     warning: {
-      base: '#FF7F44',
-      dark1: '#BF5E33',
-      dark2: '#7F3F21',
-      light1: '#FEC0A1',
-      light2: '#FFF2EC',
+      base: '#FF9800',
+      dark1: '#F57C00',
+      dark2: '#E65100',
+      light1: '#FFB74D',
+      light2: '#FFE0B2',
     },
     alert: {
       base: '#FCC700',
@@ -112,18 +113,18 @@ const defaultTheme = {
       light2: '#FEF9E6',
     },
     success: {
-      base: '#5AC189',
-      dark1: '#439066',
-      dark2: '#2B6144',
-      light1: '#ACE1C4',
-      light2: '#EEF8F3',
+      base: '#4CAF50',
+      dark1: '#388E3C',
+      dark2: '#2E7D32',
+      light1: '#81C784',
+      light2: '#C8E6C9',
     },
     info: {
-      base: '#66BCFE',
-      dark1: '#4D8CBE',
-      dark2: '#315E7E',
-      light1: '#B3DEFE',
-      light2: '#EFF8FE',
+      base: '#2196F3',
+      dark1: '#1976D2',
+      dark2: '#0D47A1',
+      light1: '#64B5F6',
+      light2: '#BBDEFB',
     },
   },
   opacity: {
@@ -163,6 +164,8 @@ const defaultTheme = {
   gridUnit: 4,
   brandIconMaxWidth: 37,
 };
+
+console.log("🎨 Superset defaultTheme loaded:", defaultTheme); // 👉 log test
 
 export type SupersetTheme = typeof defaultTheme;
 
